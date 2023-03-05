@@ -1,6 +1,7 @@
 use std::fmt;
 
 use serde::{Deserialize, Serialize};
+use crate::UFMError::InvalidPKey;
 
 mod rest;
 mod types;
@@ -8,7 +9,7 @@ mod types;
 #[derive(Serialize, Deserialize, Debug)]
 pub struct PartitionQoS {
     // Default 2k; one of 2k or 4k; the MTU of the services.
-    pub mtu: i32,
+    pub mtu_limit: i32,
     // Default is None, value can be range from 0-15
     pub service_level: i32,
     // Default is None, can be one of the following: 2.5, 10, 30, 5, 20, 40, 60, 80, 120, 14, 56, 112, 168, 25, 100, 200, or 300
@@ -59,6 +60,20 @@ pub struct UFM {
 
 pub enum UFMError {
     Unknown,
+    InvalidPKey,
+}
+
+fn build_pkey(pkey: i32) -> String {
+    format!("0x{:x}", pkey)
+}
+
+fn parse_pkey(pkey: &String) -> Result<i32, UFMError> {
+    let p = pkey.parse::<i32>();
+
+    match p {
+        Ok(k) => Ok(k),
+        Err(e) => Err(InvalidPKey),
+    }
 }
 
 impl From<types::RestError> for UFMError {
@@ -92,9 +107,23 @@ impl UFM {
             pkey
         );
         let ps = self.client.get(&path).await?;
-        let p: Partition = serde_json::from_str(&ps[..]).unwrap();
 
-        Ok(p)
+        #[derive(Serialize, Deserialize, Debug)]
+        struct Pkey {
+            partition: String,
+            ip_over_ib: bool,
+            qos_conf: PartitionQoS,
+            guids: Vec<PortBinding>,
+        }
+        let pk: Pkey = serde_json::from_str(&ps[..]).unwrap();
+
+        Ok(Partition{
+            name: pk.partition,
+            pkey: parse_pkey(pkey)?,
+            ipoib: pk.ip_over_ib,
+            qos: pk.qos_conf,
+            guids: pk.guids
+        })
     }
 
     pub fn delete_partition(&mut self, left: usize, right: usize) -> usize {

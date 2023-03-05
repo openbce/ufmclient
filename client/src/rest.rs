@@ -36,8 +36,8 @@ impl RestClient {
 
     fn build_auth(&self) -> String {
         let auth = format!("{}:{}", self.username, self.password);
-
-        general_purpose::STANDARD_NO_PAD.encode(auth)
+        // TODO(k82cn): also support credential auth.
+        format!("Basic {}", general_purpose::STANDARD_NO_PAD.encode(auth))
     }
 
     async fn execute_request(
