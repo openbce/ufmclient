@@ -68,7 +68,7 @@ pub enum UFMError {
 }
 
 impl From<types::RestError> for UFMError {
-    fn from(e: types::RestError) -> Self {
+    fn from(_e: types::RestError) -> Self {
         UFMError::Unknown {
             msg: "rest error".to_string(),
         }

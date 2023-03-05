@@ -1,7 +1,7 @@
 use clap::{Parser, Subcommand};
 
-use ufmclient::util::parse_pkey;
-use ufmclient::{Partition, PartitionQoS, PortBinding, UFMError, UFM};
+
+use ufmclient::{UFMError};
 
 mod create;
 mod view;

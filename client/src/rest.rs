@@ -2,7 +2,7 @@ use std::env;
 
 use base64::{engine::general_purpose, Engine as _};
 use hyper::header::{AUTHORIZATION, CONTENT_TYPE};
-use hyper::{Body, Client, Method, Response, Uri};
+use hyper::{Body, Client, Method, Uri};
 use hyper_tls::HttpsConnector;
 
 use crate::types::RestError;
