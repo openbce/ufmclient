@@ -1,4 +1,4 @@
-use crate::{InvalidPKey, UFMError};
+use crate::UFMError;
 
 pub fn build_pkey(pkey: i32) -> String {
     format!("0x{:x}", pkey)
@@ -10,6 +10,8 @@ pub fn parse_pkey(pkey: &String) -> Result<i32, UFMError> {
 
     match k {
         Ok(v) => Ok(v),
-        Err(_e) => Err(InvalidPKey),
+        Err(_e) => Err(UFMError::InvalidPKey {
+            msg: pkey.to_string(),
+        }),
     }
 }

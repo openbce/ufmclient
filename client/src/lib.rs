@@ -1,6 +1,5 @@
 use std::fmt;
 
-use crate::UFMError::InvalidPKey;
 use serde::{Deserialize, Serialize};
 
 use crate::util::parse_pkey;
@@ -63,20 +62,37 @@ pub struct UFM {
 }
 
 pub enum UFMError {
-    Unknown,
-    InvalidPKey,
+    Unknown { msg: String },
+    NotFound { msg: String },
+    InvalidPKey { msg: String },
 }
 
 impl From<types::RestError> for UFMError {
-    fn from(_e: types::RestError) -> Self {
-        UFMError::Unknown
+    fn from(e: types::RestError) -> Self {
+        UFMError::Unknown {
+            msg: "rest error".to_string(),
+        }
     }
 }
 
 impl fmt::Debug for UFMError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // TODO(k82cn): provide more info about UFMError.
-        f.debug_struct("UFMError").finish()
+        let mut ds = f.debug_struct("UFMError");
+
+        match &self {
+            UFMError::Unknown { msg } => {
+                ds.field("msg", msg);
+            }
+            UFMError::NotFound { msg } => {
+                ds.field("msg", msg);
+            }
+            UFMError::InvalidPKey { msg } => {
+                ds.field("msg", msg);
+            }
+        };
+
+        ds.finish()
     }
 }
 
@@ -86,7 +102,9 @@ impl UFM {
 
         match restclient {
             Ok(c) => Ok(Self { client: c }),
-            Err(_e) => Err(UFMError::Unknown),
+            Err(_e) => Err(UFMError::Unknown {
+                msg: "rest client".to_string(),
+            }),
         }
     }
 
