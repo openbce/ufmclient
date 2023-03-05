@@ -166,14 +166,20 @@ impl UFM {
     }
 
     pub fn delete_partition(&mut self, _pkey: &String) -> Result<Vec<Port>, UFMError> {
-        Err(UFMError::Unknown { msg: "unknown".to_string() })
+        Err(UFMError::Unknown {
+            msg: "unknown".to_string(),
+        })
     }
 
     pub async fn get_port(&mut self, _guid: &String) -> Result<Vec<Port>, UFMError> {
-        Err(UFMError::Unknown { msg: "unknown".to_string() })
+        Err(UFMError::Unknown {
+            msg: "unknown".to_string(),
+        })
     }
 
     pub async fn list_port(&mut self) -> Result<Vec<Port>, UFMError> {
-        Err(UFMError::Unknown { msg: "unknown".to_string() })
+        Err(UFMError::Unknown {
+            msg: "unknown".to_string(),
+        })
     }
 }

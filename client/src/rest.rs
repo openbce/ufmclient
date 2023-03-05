@@ -58,6 +58,11 @@ impl RestClient {
     }
 
     fn build_auth(&self) -> String {
+        log::debug!(
+            "Auth info: user={}, passwd={}",
+            self.username,
+            self.password
+        );
         let auth = format!("{}:{}", self.username, self.password);
         // TODO(k82cn): also support credential auth.
         format!("Basic {}", general_purpose::STANDARD_NO_PAD.encode(auth))
@@ -70,6 +75,7 @@ impl RestClient {
         data: Option<String>,
     ) -> Result<String, RestError> {
         let url = format!("{}://{}:{}/{}", self.schema, self.address, self.port, path);
+        log::debug!("Method: {}, URL: {}", method, url);
         let uri = url.parse::<Uri>().unwrap();
 
         let body = data.unwrap_or("".to_string());
