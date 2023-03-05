@@ -68,11 +68,12 @@ fn build_pkey(pkey: i32) -> String {
 }
 
 fn parse_pkey(pkey: &String) -> Result<i32, UFMError> {
-    let p = pkey.parse::<i32>();
+    let p = pkey.trim_start_matches("0x");
+    let k = i32::from_str_radix(p, 16);
 
-    match p {
-        Ok(k) => Ok(k),
-        Err(e) => Err(InvalidPKey),
+    match k {
+        Ok(v) => Ok(v),
+        Err(_e) => Err(InvalidPKey),
     }
 }
 
@@ -84,7 +85,9 @@ impl From<types::RestError> for UFMError {
 
 impl fmt::Debug for UFMError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("UFMError").finish()
+        // TODO(k82cn): provide more info about UFMError.
+        f.debug_struct("UFMError")
+            .finish()
     }
 }
 
