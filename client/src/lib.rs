@@ -1,7 +1,11 @@
 use std::fmt;
 
-use serde::{Deserialize, Serialize};
 use crate::UFMError::InvalidPKey;
+use serde::{Deserialize, Serialize};
+
+use crate::util::parse_pkey;
+
+pub mod util;
 
 mod rest;
 mod types;
@@ -63,20 +67,6 @@ pub enum UFMError {
     InvalidPKey,
 }
 
-fn build_pkey(pkey: i32) -> String {
-    format!("0x{:x}", pkey)
-}
-
-fn parse_pkey(pkey: &String) -> Result<i32, UFMError> {
-    let p = pkey.trim_start_matches("0x");
-    let k = i32::from_str_radix(p, 16);
-
-    match k {
-        Ok(v) => Ok(v),
-        Err(_e) => Err(InvalidPKey),
-    }
-}
-
 impl From<types::RestError> for UFMError {
     fn from(_e: types::RestError) -> Self {
         UFMError::Unknown
@@ -86,8 +76,7 @@ impl From<types::RestError> for UFMError {
 impl fmt::Debug for UFMError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // TODO(k82cn): provide more info about UFMError.
-        f.debug_struct("UFMError")
-            .finish()
+        f.debug_struct("UFMError").finish()
     }
 }
 
@@ -120,12 +109,12 @@ impl UFM {
         }
         let pk: Pkey = serde_json::from_str(&ps[..]).unwrap();
 
-        Ok(Partition{
+        Ok(Partition {
             name: pk.partition,
             pkey: parse_pkey(pkey)?,
             ipoib: pk.ip_over_ib,
             qos: pk.qos_conf,
-            guids: pk.guids
+            guids: pk.guids,
         })
     }
 
