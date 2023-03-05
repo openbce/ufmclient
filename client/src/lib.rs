@@ -5,7 +5,6 @@ use serde::{Deserialize, Serialize};
 use std::fmt;
 
 use crate::types::RestError;
-use std::fmt::{Pointer, Write};
 
 mod rest;
 mod types;
@@ -66,8 +65,8 @@ pub enum UFMError {
     Unknown,
 }
 
-impl From<types::RestError> for UFMError {
-    fn from(e: types::RestError) -> Self {
+impl From<RestError> for UFMError {
+    fn from(e: RestError) -> Self {
         match e {
             _ => UFMError::Unknown,
         }
@@ -86,36 +85,32 @@ impl UFM {
 
         match restclient {
             Ok(c) => Ok(Self { client: c }),
-            Err(e) => Err(UFMError::Unknown),
+            Err(_e) => Err(UFMError::Unknown),
         }
     }
 
-    pub async fn create_partition(self: &mut Self, p: Partition) -> Result<(), UFMError> {
+    pub async fn create_partition(&mut self, p: Partition) -> Result<(), UFMError> {
         Ok(())
     }
-    pub async fn get_partition(self: &mut Self, pkey: &String) -> Result<Partition, UFMError> {
-        let mut path = String::new();
-        write!(
-            path,
+    pub async fn get_partition(&mut self, pkey: &String) -> Result<Partition, UFMError> {
+        let path = format!(
             "/ufmRest/resources/pkeys/{}?guids_data=true&qos_conf=true",
             pkey
-        )
-        .unwrap();
-
+        );
         let ps = self.client.get(&path).await?;
         let p: Partition = serde_json::from_str(&ps[..]).unwrap();
 
         Ok(p)
     }
 
-    pub fn delete_partition(left: usize, right: usize) -> usize {
+    pub fn delete_partition(&mut self, left: usize, right: usize) -> usize {
         left + right
     }
-    pub fn patch_partition(left: usize, right: usize) -> usize {
+    pub fn patch_partition(&mut self, left: usize, right: usize) -> usize {
         left + right
     }
 
-    pub fn get_port(left: usize, right: usize) -> usize {
+    pub fn get_port(&mut self, left: usize, right: usize) -> usize {
         left + right
     }
 }

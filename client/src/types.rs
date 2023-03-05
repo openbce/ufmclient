@@ -42,8 +42,8 @@ impl From<String> for RestSchema {
 impl Display for RestSchema {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
-            RestSchema::HTTP => write!(f, "{}", "http"),
-            RestSchema::HTTPS => write!(f, "{}", "https"),
+            RestSchema::HTTP => write!(f, "http"),
+            RestSchema::HTTPS => write!(f, "https"),
         }
     }
 }

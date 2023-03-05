@@ -1,12 +1,9 @@
 use std::env;
-use std::fmt::Write;
 
 use base64::{engine::general_purpose, Engine as _};
 
-use hyper::body::HttpBody;
-use hyper::client::HttpConnector;
 use hyper::header::{AUTHORIZATION, CONTENT_TYPE};
-use hyper::{Body, Client, Method, Request, Response, Uri};
+use hyper::{Body, Client, Method, Response, Uri};
 use hyper_tls::HttpsConnector;
 
 use crate::types::RestError;
@@ -37,14 +34,14 @@ impl RestClient {
         })
     }
 
-    fn build_auth(self: &Self) -> String {
+    fn build_auth(&self) -> String {
         let auth = format!("{}:{}", self.username, self.password);
 
         general_purpose::STANDARD_NO_PAD.encode(auth)
     }
 
     async fn execute_request(
-        self: &Self,
+        &self,
         method: Method,
         path: &String,
         data: Option<String>,
@@ -63,11 +60,11 @@ impl RestClient {
             .unwrap();
 
         match &self.schema {
-            HTTP => {
+            RestSchema::HTTP => {
                 let client = Client::new();
                 client.request(req).await
             }
-            HTTPS => {
+            RestSchema::HTTPS => {
                 let https = HttpsConnector::new();
                 let client = Client::builder().build::<_, hyper::Body>(https);
                 client.request(req).await
@@ -75,7 +72,7 @@ impl RestClient {
         }
     }
 
-    pub async fn get(self: &Self, path: &String) -> Result<String, RestError> {
+    pub async fn get(&self, path: &String) -> Result<String, RestError> {
         let body = self.execute_request(Method::GET, path, None).await?;
         let chunk = hyper::body::to_bytes(body.into_body()).await?;
         let data = String::from_utf8(chunk.to_vec()).unwrap();
@@ -83,9 +80,9 @@ impl RestClient {
         Ok(data)
     }
 
-    pub fn post(self: &Self, path: String, data: String) {}
+    pub fn post(&self, path: String, data: String) {}
 
-    pub fn put(self: &Self, path: String, data: String) {}
+    pub fn put(&self, path: String, data: String) {}
 
-    pub fn delete(self: &Self, path: String) {}
+    pub fn delete(&self, path: String) {}
 }
