@@ -9,32 +9,28 @@ pub enum RestError {
 }
 
 impl From<hyper::Error> for RestError {
-    fn from(value: hyper::Error) -> Self {
-        match value {
-            _ => RestError::Unknown,
-        }
+    fn from(_value: hyper::Error) -> Self {
+        RestError::Unknown
     }
 }
 
 impl From<VarError> for RestError {
-    fn from(value: VarError) -> Self {
-        match value {
-            _ => RestError::Unknown,
-        }
+    fn from(_value: VarError) -> Self {
+        RestError::Unknown
     }
 }
 
 pub enum RestSchema {
-    HTTP,
-    HTTPS,
+    Http,
+    Https,
 }
 
 impl From<String> for RestSchema {
     fn from(value: String) -> Self {
         match value.to_uppercase().as_str() {
-            "HTTP" => RestSchema::HTTP,
-            "HTTPS" => RestSchema::HTTPS,
-            _ => RestSchema::HTTP,
+            "HTTP" => RestSchema::Http,
+            "HTTPS" => RestSchema::Https,
+            _ => RestSchema::Http,
         }
     }
 }
@@ -42,8 +38,8 @@ impl From<String> for RestSchema {
 impl Display for RestSchema {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
-            RestSchema::HTTP => write!(f, "http"),
-            RestSchema::HTTPS => write!(f, "https"),
+            RestSchema::Http => write!(f, "http"),
+            RestSchema::Https => write!(f, "https"),
         }
     }
 }

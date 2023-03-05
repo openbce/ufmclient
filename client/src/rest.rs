@@ -60,11 +60,11 @@ impl RestClient {
             .unwrap();
 
         match &self.schema {
-            RestSchema::HTTP => {
+            RestSchema::Http => {
                 let client = Client::new();
                 client.request(req).await
             }
-            RestSchema::HTTPS => {
+            RestSchema::Https => {
                 let https = HttpsConnector::new();
                 let client = Client::builder().build::<_, hyper::Body>(https);
                 client.request(req).await

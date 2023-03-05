@@ -1,10 +1,6 @@
-extern crate core;
-
-use serde::{Deserialize, Serialize};
-
 use std::fmt;
 
-use crate::types::RestError;
+use serde::{Deserialize, Serialize};
 
 mod rest;
 mod types;
@@ -65,11 +61,9 @@ pub enum UFMError {
     Unknown,
 }
 
-impl From<RestError> for UFMError {
-    fn from(e: RestError) -> Self {
-        match e {
-            _ => UFMError::Unknown,
-        }
+impl From<types::RestError> for UFMError {
+    fn from(_e: types::RestError) -> Self {
+        UFMError::Unknown
     }
 }
 
@@ -114,15 +108,3 @@ impl UFM {
         left + right
     }
 }
-
-//
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-//
-//     #[test]
-//     fn it_works() {
-//         let result = add(2, 2);
-//         assert_eq!(result, 4);
-//     }
-// }
