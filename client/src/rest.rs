@@ -78,7 +78,7 @@ impl RestClient {
         log::debug!("Method: {}, URL: {}", method, url);
         let uri = url.parse::<Uri>().unwrap();
 
-        let body = data.unwrap_or("".to_string());
+        let body = data.unwrap_or(String::new());
 
         let req = hyper::Request::builder()
             .method(method)
