@@ -2,7 +2,7 @@ use std::fmt;
 
 use serde::{Deserialize, Serialize};
 
-use crate::util::parse_pkey;
+use crate::util::{build_pkey, parse_pkey};
 
 pub mod util;
 
@@ -109,8 +109,37 @@ impl UFM {
     }
 
     pub async fn create_partition(&mut self, p: Partition) -> Result<(), UFMError> {
+        let path = String::from("/ufmRest/resources/pkeys");
+
+        #[derive(Serialize, Deserialize, Debug)]
+        struct Pkey {
+            pkey: String,
+            ip_over_ib: bool,
+            membership: String,
+            index0: bool,
+            guids: Vec<String>,
+        }
+
+        let mut guids = vec![];
+        for pb in p.guids {
+            guids.push(pb.guid);
+        }
+
+        let pkey = Pkey {
+            pkey: build_pkey(p.pkey),
+            ip_over_ib: p.ipoib,
+            membership: String::from("full"),
+            index0: true,
+            guids: guids,
+        };
+
+        let data = serde_json::to_string(&pkey).unwrap();
+
+        self.client.post(&path, data).await?;
+
         Ok(())
     }
+
     pub async fn get_partition(&mut self, pkey: &String) -> Result<Partition, UFMError> {
         let path = format!(
             "/ufmRest/resources/pkeys/{}?guids_data=true&qos_conf=true",
@@ -136,14 +165,15 @@ impl UFM {
         })
     }
 
-    pub fn delete_partition(&mut self, left: usize, right: usize) -> usize {
-        left + right
-    }
-    pub fn patch_partition(&mut self, left: usize, right: usize) -> usize {
-        left + right
+    pub fn delete_partition(&mut self, _pkey: &String) -> Result<Vec<Port>, UFMError> {
+        Err(UFMError::Unknown { msg: "unknown".to_string() })
     }
 
-    pub fn get_port(&mut self, left: usize, right: usize) -> usize {
-        left + right
+    pub async fn get_port(&mut self, _guid: &String) -> Result<Vec<Port>, UFMError> {
+        Err(UFMError::Unknown { msg: "unknown".to_string() })
+    }
+
+    pub async fn list_port(&mut self) -> Result<Vec<Port>, UFMError> {
+        Err(UFMError::Unknown { msg: "unknown".to_string() })
     }
 }

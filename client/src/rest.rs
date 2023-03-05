@@ -1,7 +1,6 @@
 use std::env;
 
 use base64::{engine::general_purpose, Engine as _};
-
 use hyper::header::{AUTHORIZATION, CONTENT_TYPE};
 use hyper::{Body, Client, Method, Response, Uri};
 use hyper_tls::HttpsConnector;
@@ -34,6 +33,30 @@ impl RestClient {
         })
     }
 
+    pub async fn get(&self, path: &String) -> Result<String, RestError> {
+        let data = self.execute_request(Method::GET, path, None).await?;
+
+        Ok(data)
+    }
+
+    pub async fn post(&self, path: &String, data: String) -> Result<(), RestError> {
+        self.execute_request(Method::POST, path, Some(data)).await?;
+
+        Ok(())
+    }
+
+    pub async fn put(&self, path: &String, data: String) -> Result<(), RestError> {
+        self.execute_request(Method::PUT, path, Some(data)).await?;
+
+        Ok(())
+    }
+
+    pub async fn delete(&self, path: &String) -> Result<(), RestError> {
+        self.execute_request(Method::DELETE, path, None).await?;
+
+        Ok(())
+    }
+
     fn build_auth(&self) -> String {
         let auth = format!("{}:{}", self.username, self.password);
         // TODO(k82cn): also support credential auth.
@@ -45,7 +68,7 @@ impl RestClient {
         method: Method,
         path: &String,
         data: Option<String>,
-    ) -> hyper::Result<Response<Body>> {
+    ) -> Result<String, RestError> {
         let url = format!("{}://{}:{}/{}", self.schema, self.address, self.port, path);
         let uri = url.parse::<Uri>().unwrap();
 
@@ -59,30 +82,21 @@ impl RestClient {
             .body(Body::from(body))
             .unwrap();
 
-        match &self.schema {
+        let body = match &self.schema {
             RestSchema::Http => {
                 let client = Client::new();
-                client.request(req).await
+                client.request(req).await?
             }
             RestSchema::Https => {
                 let https = HttpsConnector::new();
                 let client = Client::builder().build::<_, hyper::Body>(https);
-                client.request(req).await
+                client.request(req).await?
             }
-        }
-    }
+        };
 
-    pub async fn get(&self, path: &String) -> Result<String, RestError> {
-        let body = self.execute_request(Method::GET, path, None).await?;
         let chunk = hyper::body::to_bytes(body.into_body()).await?;
         let data = String::from_utf8(chunk.to_vec()).unwrap();
 
         Ok(data)
     }
-
-    pub fn post(&self, path: String, data: String) {}
-
-    pub fn put(&self, path: String, data: String) {}
-
-    pub fn delete(&self, path: String) {}
 }

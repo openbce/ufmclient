@@ -1,6 +1,6 @@
 use ufmclient::{UFMError, UFM};
 
-pub async fn view_run(pkey: &String) -> Result<(), UFMError> {
+pub async fn run(pkey: &String) -> Result<(), UFMError> {
     let mut ufm = UFM::new()?;
     let p = ufm.get_partition(pkey).await?;
 
