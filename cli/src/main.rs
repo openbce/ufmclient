@@ -1,7 +1,6 @@
 use clap::{Parser, Subcommand};
 
-
-use ufmclient::{UFMError};
+use ufmclient::UFMError;
 
 mod create;
 mod view;
@@ -59,17 +58,17 @@ async fn main() -> Result<(), UFMError> {
             rate_limit,
             guids,
         }) => {
-            create::run(
-                pkey,
-                mtu,
-                ipoib,
-                index0,
-                membership,
-                service_level,
-                rate_limit,
-                guids,
-            )
-            .await?
+            let opt = create::CreateOptions {
+                pkey: pkey.to_string(),
+                mtu: *mtu,
+                ipoib: *ipoib,
+                index0: *index0,
+                membership: membership.to_string(),
+                service_level: *service_level,
+                rate_limit: *rate_limit,
+                guids: guids.to_vec(),
+            };
+            create::run(opt).await?
         }
         None => {}
     };

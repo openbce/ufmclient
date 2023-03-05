@@ -108,7 +108,7 @@ impl UFM {
         }
     }
 
-    pub async fn create_partition(&mut self, p: Partition) -> Result<(), UFMError> {
+    pub async fn create_partition(&mut self, p: &Partition) -> Result<(), UFMError> {
         let path = String::from("/ufmRest/resources/pkeys");
 
         #[derive(Serialize, Deserialize, Debug)]
@@ -121,8 +121,8 @@ impl UFM {
         }
 
         let mut guids = vec![];
-        for pb in p.guids {
-            guids.push(pb.guid);
+        for pb in &p.guids {
+            guids.push(pb.guid.to_string());
         }
 
         let pkey = Pkey {
@@ -130,7 +130,7 @@ impl UFM {
             ip_over_ib: p.ipoib,
             membership: String::from("full"),
             index0: true,
-            guids: guids,
+            guids,
         };
 
         let data = serde_json::to_string(&pkey).unwrap();
