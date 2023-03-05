@@ -44,6 +44,8 @@ enum Commands {
 
 #[tokio::main]
 async fn main() -> Result<(), UFMError> {
+    env_logger::init();
+
     let cli = Cli::parse();
     match &cli.command {
         Some(Commands::View { pkey }) => view::run(pkey).await?,
