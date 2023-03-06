@@ -63,14 +63,29 @@ pub struct Port {
 impl From<HashMap<String, Value>> for Port {
     fn from(value: HashMap<String, Value>) -> Self {
         Self {
-            guid: value.get("guid").unwrap().to_string(),
-            name: value.get("name").unwrap().to_string(),
-            system_id: value.get("systemID").unwrap().to_string(),
-            lid: value.get("systemID").unwrap().as_i64().unwrap() as i32,
-            dname: value.get("dname").unwrap().to_string(),
-            system_name: value.get("system_name").unwrap().to_string(),
-            physical_state: value.get("physical_state").unwrap().to_string(),
-            logical_state: value.get("logical_state").unwrap().to_string(),
+            guid: value.get("guid").unwrap().as_str().unwrap().to_string(),
+            name: value.get("name").unwrap().as_str().unwrap().to_string(),
+            system_id: value.get("systemID").unwrap().as_str().unwrap().to_string(),
+            lid: value.get("lid").unwrap().as_i64().unwrap() as i32,
+            dname: value.get("dname").unwrap().as_str().unwrap().to_string(),
+            system_name: value
+                .get("system_name")
+                .unwrap()
+                .as_str()
+                .unwrap()
+                .to_string(),
+            physical_state: value
+                .get("physical_state")
+                .unwrap()
+                .as_str()
+                .unwrap()
+                .to_string(),
+            logical_state: value
+                .get("logical_state")
+                .unwrap()
+                .as_str()
+                .unwrap()
+                .to_string(),
         }
     }
 }

@@ -14,12 +14,12 @@ pub async fn run(pkey: &String) -> Result<(), UFMError> {
     println!("{:15}: ", "Ports");
 
     println!(
-        "    {:<20}{:<20}{:<20}{:<15}{:<15}{:<10}{:<15}{:<10}",
+        "    {:<25}{:<20}{:<20}{:<15}{:<15}{:<10}{:<15}{:<10}",
         "Name", "GUID", "SystemID", "SystemName", "DName", "LID", "LogState", "PhyState"
     );
     for port in ps {
         println!(
-            "    {:<20}{:<20}{:<20}{:<15}{:<15}{:<10}{:<15}{:<10}",
+            "    {:<25}{:<20}{:<20}{:<15}{:<15}{:<10}{:<15}{:<10}",
             port.name,
             port.guid,
             port.system_id,
