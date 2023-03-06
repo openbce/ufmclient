@@ -1,5 +1,5 @@
 [package]
-name = "ufm"
+name = "ufmcli"
 version = "0.1.0"
 edition = "2021"
 
@@ -10,3 +10,7 @@ ufmclient = { path = "../client" }
 tokio = { version = "1", features = ["full"] }
 clap = { version = "4.1.8", features = ["derive"] }
 env_logger = { version = "0.10" }
+
+[[bin]]
+name = "ufm"
+path = "src/main.rs"
