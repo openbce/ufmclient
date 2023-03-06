@@ -15,3 +15,7 @@ pub fn parse_pkey(pkey: &String) -> Result<i32, UFMError> {
         }),
     }
 }
+
+pub fn is_default_pkey(pkey: i32) -> bool {
+    pkey == 3766
+}

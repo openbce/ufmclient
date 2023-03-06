@@ -1,9 +1,26 @@
-use ufmclient::{UFMError, UFM};
+use ufmclient::util::is_default_pkey;
+use ufmclient::{Filter, UFMError, UFM};
 
 pub async fn run(pkey: &String) -> Result<(), UFMError> {
     let mut ufm = UFM::new()?;
     let p = ufm.get_partition(pkey).await?;
-    let ps = ufm.list_port().await?;
+
+    let ps = {
+        if !is_default_pkey(p.pkey) {
+            let f = Filter {
+                guids: {
+                    let mut v = Vec::new();
+                    for i in p.guids {
+                        v.push(i.guid.to_string());
+                    }
+                    Some(v)
+                },
+            };
+            ufm.list_port(Some(f)).await?
+        } else {
+            ufm.list_port(None).await?
+        }
+    };
 
     println!("{:15}: {}", "Name", p.name);
     println!("{:15}: 0x{:x}", "Pkey", p.pkey);

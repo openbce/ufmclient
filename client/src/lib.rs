@@ -78,6 +78,10 @@ impl From<HashMap<String, Value>> for Port {
     }
 }
 
+pub struct Filter {
+    pub guids: Option<Vec<String>>,
+}
+
 pub struct UFM {
     client: rest::RestClient,
 }
@@ -198,30 +202,45 @@ impl UFM {
     }
 
     pub async fn list_partition(&mut self) -> Result<Vec<Partition>, UFMError> {
-        let path = String::from("/ufmRest/resources/pkeys?qos_conf=true");
-
-        let ps = self.client.get(&path).await?;
-
-        log::debug!("listQoS: {}", ps);
-
         #[derive(Serialize, Deserialize, Debug)]
         struct Pkey {
             partition: String,
             ip_over_ib: bool,
-            qos_conf: PartitionQoS,
+            qos_conf: Option<PartitionQoS>,
+            guids: Option<Vec<PortBinding>>,
         }
-        let pks: HashMap<String, Pkey> = serde_json::from_str(&ps[..]).unwrap();
+
+        let pkey_qos: HashMap<String, Pkey> = {
+            let path = String::from("/ufmRest/resources/pkeys?qos_conf=true");
+            let ps = self.client.get(&path).await?;
+            log::debug!("listQoS: {}", ps);
+
+            serde_json::from_str(&ps[..]).unwrap()
+        };
+
+        let mut pkey_guids: HashMap<String, Pkey> = {
+            let path = String::from("/ufmRest/resources/pkeys?guids_data=true");
+            let ps = self.client.get(&path).await?;
+            log::debug!("listGUIDs: {}", ps);
+
+            serde_json::from_str(&ps[..]).unwrap()
+        };
 
         let mut parts = Vec::new();
 
-        for (k, v) in pks {
+        for (k, v) in pkey_qos {
             parts.push(Partition {
                 name: v.partition,
                 pkey: parse_pkey(&k)?,
                 ipoib: v.ip_over_ib,
-                qos: v.qos_conf,
-                // TODO(k82cn): get GUIDs by rest
-                guids: Vec::new(),
+                qos: v.qos_conf.unwrap(),
+                guids: {
+                    let g = pkey_guids.remove(&k);
+                    match g {
+                        Some(pk) => pk.guids.unwrap_or(Vec::new()),
+                        None => Vec::new(),
+                    }
+                },
             });
         }
 
@@ -235,7 +254,7 @@ impl UFM {
         Ok(())
     }
 
-    pub async fn list_port(&mut self) -> Result<Vec<Port>, UFMError> {
+    pub async fn list_port(&mut self, filter: Option<Filter>) -> Result<Vec<Port>, UFMError> {
         let path = String::from("/ufmRest/resources/ports?sys_type=Computer");
         let resp = self.client.get(&path).await?;
 
@@ -245,7 +264,32 @@ impl UFM {
 
         let mut res = Vec::new();
         for p in ports {
-            res.push(Port::from(p));
+            let port = Port::from(p);
+
+            match &filter {
+                None => {
+                    res.push(port);
+                }
+                Some(f) => {
+                    let mut found = false;
+                    match &f.guids {
+                        None => {
+                            res.push(port);
+                        }
+                        Some(g) => {
+                            for i in g {
+                                if port.guid == *i {
+                                    found = true;
+                                    break;
+                                }
+                            }
+                            if found {
+                                res.push(port);
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         Ok(res)
