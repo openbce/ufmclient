@@ -3,6 +3,7 @@ use clap::{Parser, Subcommand};
 use ufmclient::UFMError;
 
 mod create;
+mod delete;
 mod list;
 mod version;
 mod view;
@@ -25,6 +26,10 @@ enum Commands {
     },
     List,
     Version,
+    Delete {
+        #[arg(short, long)]
+        pkey: String,
+    },
     Create {
         #[arg(short, long)]
         pkey: String,
@@ -51,6 +56,7 @@ async fn main() -> Result<(), UFMError> {
 
     let cli = Cli::parse();
     match &cli.command {
+        Some(Commands::Delete { pkey }) => delete::run(pkey).await?,
         Some(Commands::Version) => version::run().await?,
         Some(Commands::List) => list::run().await?,
         Some(Commands::View { pkey }) => view::run(pkey).await?,
