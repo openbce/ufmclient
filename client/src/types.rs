@@ -3,20 +3,31 @@ use std::fmt;
 use std::fmt::{Display, Formatter};
 
 pub enum RestError {
-    Unknown,
-    NotFound,
-    AuthFailure,
+    Unknown { msg: String },
+    NotFound { msg: String },
+    AuthFailure { msg: String },
+    InvalidConfig { msg: String },
 }
 
 impl From<hyper::Error> for RestError {
-    fn from(_value: hyper::Error) -> Self {
-        RestError::Unknown
+    fn from(value: hyper::Error) -> Self {
+        if value.is_user() {
+            return RestError::AuthFailure {
+                msg: value.message().to_string(),
+            };
+        }
+
+        RestError::Unknown {
+            msg: value.message().to_string(),
+        }
     }
 }
 
 impl From<VarError> for RestError {
-    fn from(_value: VarError) -> Self {
-        RestError::Unknown
+    fn from(value: VarError) -> Self {
+        RestError::InvalidConfig {
+            msg: value.to_string(),
+        }
     }
 }
 

@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::fmt;
 
+use crate::types::RestError;
 use serde::{Deserialize, Serialize};
 
 use crate::util::{build_pkey, parse_pkey};
@@ -66,47 +67,52 @@ pub enum UFMError {
     Unknown { msg: String },
     NotFound { msg: String },
     InvalidPKey { msg: String },
+    InvalidConfig { msg: String },
 }
 
 impl From<types::RestError> for UFMError {
-    fn from(_e: types::RestError) -> Self {
-        UFMError::Unknown {
-            msg: "rest error".to_string(),
+    fn from(e: types::RestError) -> Self {
+        match &e {
+            RestError::Unknown { msg } => UFMError::Unknown {
+                msg: msg.to_string(),
+            },
+            RestError::NotFound { msg } => UFMError::NotFound {
+                msg: msg.to_string(),
+            },
+            RestError::AuthFailure { msg } => UFMError::InvalidConfig {
+                msg: msg.to_string(),
+            },
+            RestError::InvalidConfig { msg } => UFMError::InvalidConfig {
+                msg: msg.to_string(),
+            },
         }
     }
 }
 
 impl fmt::Debug for UFMError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        // TODO(k82cn): provide more info about UFMError.
-        let mut ds = f.debug_struct("UFMError");
-
         match &self {
             UFMError::Unknown { msg } => {
-                ds.field("msg", msg);
+                write!(f, "Unknown: {}", msg)
             }
             UFMError::NotFound { msg } => {
-                ds.field("msg", msg);
+                write!(f, "Not found: {}", msg)
             }
             UFMError::InvalidPKey { msg } => {
-                ds.field("msg", msg);
+                write!(f, "Invalid pkey: {}", msg)
             }
-        };
-
-        ds.finish()
+            UFMError::InvalidConfig { msg } => {
+                write!(f, "Invalid configuration: {}", msg)
+            }
+        }
     }
 }
 
 impl UFM {
     pub fn new() -> Result<UFM, UFMError> {
-        let restclient = rest::RestClient::new();
+        let c = rest::RestClient::new()?;
 
-        match restclient {
-            Ok(c) => Ok(Self { client: c }),
-            Err(_e) => Err(UFMError::Unknown {
-                msg: "rest client".to_string(),
-            }),
-        }
+        Ok(Self { client: c })
     }
 
     pub async fn create_partition(&mut self, p: &Partition) -> Result<(), UFMError> {
