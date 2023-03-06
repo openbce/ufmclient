@@ -2,10 +2,10 @@ use std::collections::HashMap;
 use std::fmt;
 
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 use crate::types::RestError;
 use crate::util::{build_pkey, parse_pkey};
-use crate::UFMError::NotFound;
 
 pub mod util;
 
@@ -60,6 +60,21 @@ pub struct Port {
     pub logical_state: String,
 }
 
+impl From<HashMap<String, Value>> for Port {
+    fn from(value: HashMap<String, Value>) -> Self {
+        Self {
+            guid: value.get("guid").unwrap().to_string(),
+            name: value.get("name").unwrap().to_string(),
+            system_id: value.get("systemID").unwrap().to_string(),
+            lid: value.get("systemID").unwrap().as_i64().unwrap() as i32,
+            dname: value.get("dname").unwrap().to_string(),
+            system_name: value.get("system_name").unwrap().to_string(),
+            physical_state: value.get("physical_state").unwrap().to_string(),
+            logical_state: value.get("logical_state").unwrap().to_string(),
+        }
+    }
+}
+
 pub struct UFM {
     client: rest::RestClient,
 }
@@ -71,8 +86,8 @@ pub enum UFMError {
     InvalidConfig { msg: String },
 }
 
-impl From<types::RestError> for UFMError {
-    fn from(e: types::RestError) -> Self {
+impl From<RestError> for UFMError {
+    fn from(e: RestError) -> Self {
         match &e {
             RestError::Unknown { msg } => UFMError::Unknown {
                 msg: msg.to_string(),
@@ -156,7 +171,7 @@ impl UFM {
         let ps = self.client.get(&path).await?;
 
         if ps == "{}" {
-            return Err(NotFound {
+            return Err(UFMError::NotFound {
                 msg: format!("{} not found", pkey),
             });
         }
@@ -223,9 +238,14 @@ impl UFM {
 
         log::debug!("list ports: {}", resp);
 
-        let ports: Vec<Port> = serde_json::from_str(&resp[..]).unwrap();
+        let ports: Vec<HashMap<String, Value>> = serde_json::from_str(&resp[..]).unwrap();
 
-        Ok(ports)
+        let mut res = Vec::new();
+        for p in ports {
+            res.push(Port::from(p));
+        }
+
+        Ok(res)
     }
 
     pub async fn version(&mut self) -> Result<String, UFMError> {
