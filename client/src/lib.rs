@@ -1,10 +1,11 @@
 use std::collections::HashMap;
 use std::fmt;
 
-use crate::types::RestError;
 use serde::{Deserialize, Serialize};
 
+use crate::types::RestError;
 use crate::util::{build_pkey, parse_pkey};
+use crate::UFMError::NotFound;
 
 pub mod util;
 
@@ -154,6 +155,12 @@ impl UFM {
         );
         let ps = self.client.get(&path).await?;
 
+        if ps == "{}" {
+            return Err(NotFound {
+                msg: format!("{} not found", pkey),
+            });
+        }
+
         #[derive(Serialize, Deserialize, Debug)]
         struct Pkey {
             partition: String,
@@ -203,21 +210,34 @@ impl UFM {
         Ok(parts)
     }
 
-    pub fn delete_partition(&mut self, _pkey: &String) -> Result<Vec<Port>, UFMError> {
-        Err(UFMError::Unknown {
-            msg: "unknown".to_string(),
-        })
-    }
+    pub async fn delete_partition(&mut self, pkey: &String) -> Result<(), UFMError> {
+        let path = format!("/ufmRest/resources/pkeys/{}", pkey);
+        self.client.delete(&path).await?;
 
-    pub async fn get_port(&mut self, _guid: &String) -> Result<Vec<Port>, UFMError> {
-        Err(UFMError::Unknown {
-            msg: "unknown".to_string(),
-        })
+        Ok(())
     }
 
     pub async fn list_port(&mut self) -> Result<Vec<Port>, UFMError> {
-        Err(UFMError::Unknown {
-            msg: "unknown".to_string(),
-        })
+        let path = String::from("/ufmRest/resources/ports?sys_type=Computer");
+        let resp = self.client.get(&path).await?;
+
+        log::debug!("list ports: {}", resp);
+
+        let ports: Vec<Port> = serde_json::from_str(&resp[..]).unwrap();
+
+        Ok(ports)
+    }
+
+    pub async fn version(&mut self) -> Result<String, UFMError> {
+        #[derive(Serialize, Deserialize, Debug)]
+        struct Version {
+            ufm_release_version: String,
+        }
+
+        let path = String::from("/ufmRest/app/ufm_version");
+        let resp = self.client.get(&path).await?;
+        let v: Version = serde_json::from_str(&resp[..]).unwrap();
+
+        Ok(v.ufm_release_version)
     }
 }
