@@ -82,6 +82,27 @@ pub struct Filter {
     pub guids: Option<Vec<String>>,
 }
 
+impl Filter {
+    fn valid(&self, p: &Port) -> bool {
+        // Check GUID filter
+        if let Some(guids) = &self.guids {
+            let mut found = false;
+            for id in guids {
+                if p.guid == *id {
+                    found = true;
+                }
+            }
+
+            if !found {
+                return false;
+            }
+        }
+
+        // All filters are passed, return true.
+        true
+    }
+}
+
 pub struct UFM {
     client: rest::RestClient,
 }
@@ -261,34 +282,16 @@ impl UFM {
         log::debug!("list ports: {}", resp);
 
         let ports: Vec<HashMap<String, Value>> = serde_json::from_str(&resp[..]).unwrap();
+        let f = match filter {
+            None => Filter { guids: None },
+            Some(f) => f,
+        };
 
         let mut res = Vec::new();
         for p in ports {
             let port = Port::from(p);
-
-            match &filter {
-                None => {
-                    res.push(port);
-                }
-                Some(f) => {
-                    let mut found = false;
-                    match &f.guids {
-                        None => {
-                            res.push(port);
-                        }
-                        Some(g) => {
-                            for i in g {
-                                if port.guid == *i {
-                                    found = true;
-                                    break;
-                                }
-                            }
-                            if found {
-                                res.push(port);
-                            }
-                        }
-                    }
-                }
+            if f.valid(&port) {
+                res.push(port);
             }
         }
 
