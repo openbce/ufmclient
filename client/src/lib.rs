@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::fmt;
 
 use serde::{Deserialize, Serialize};
@@ -166,28 +167,30 @@ impl UFM {
     }
 
     pub async fn list_partition(&mut self) -> Result<Vec<Partition>, UFMError> {
-        let path = String::from("/ufmRest/resources/pkeys");
+        let path = String::from("/ufmRest/resources/pkeys?qos_conf=true");
 
         let ps = self.client.get(&path).await?;
+
+        log::debug!("listQoS: {}", ps);
 
         #[derive(Serialize, Deserialize, Debug)]
         struct Pkey {
             partition: String,
             ip_over_ib: bool,
             qos_conf: PartitionQoS,
-            guids: Vec<PortBinding>,
         }
-        let pks: Vec<Pkey> = serde_json::from_str(&ps[..]).unwrap();
+        let pks: HashMap<String, Pkey> = serde_json::from_str(&ps[..]).unwrap();
 
         let mut parts = Vec::new();
 
-        for p in pks {
+        for (k, v) in pks {
             parts.push(Partition {
-                name: p.partition,
-                pkey: 0,
-                ipoib: p.ip_over_ib,
-                qos: p.qos_conf,
-                guids: p.guids,
+                name: v.partition,
+                pkey: parse_pkey(&k)?,
+                ipoib: v.ip_over_ib,
+                qos: v.qos_conf,
+                // TODO(k82cn): get GUIDs by rest
+                guids: Vec::new(),
             });
         }
 
