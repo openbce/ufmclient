@@ -62,30 +62,18 @@ pub struct Port {
 
 impl From<HashMap<String, Value>> for Port {
     fn from(value: HashMap<String, Value>) -> Self {
+        let get_str = |v: Option<&Value>| -> String { v.unwrap().as_str().unwrap().to_string() };
+        let get_i64 = |v: Option<&Value>| -> i64 { v.unwrap().as_i64().unwrap() };
+
         Self {
-            guid: value.get("guid").unwrap().as_str().unwrap().to_string(),
-            name: value.get("name").unwrap().as_str().unwrap().to_string(),
-            system_id: value.get("systemID").unwrap().as_str().unwrap().to_string(),
-            lid: value.get("lid").unwrap().as_i64().unwrap() as i32,
-            dname: value.get("dname").unwrap().as_str().unwrap().to_string(),
-            system_name: value
-                .get("system_name")
-                .unwrap()
-                .as_str()
-                .unwrap()
-                .to_string(),
-            physical_state: value
-                .get("physical_state")
-                .unwrap()
-                .as_str()
-                .unwrap()
-                .to_string(),
-            logical_state: value
-                .get("logical_state")
-                .unwrap()
-                .as_str()
-                .unwrap()
-                .to_string(),
+            guid: get_str(value.get("guid")),
+            name: get_str(value.get("name")),
+            system_id: get_str(value.get("systemID")),
+            lid: get_i64(value.get("lid")) as i32,
+            dname: get_str(value.get("dname")),
+            system_name: get_str(value.get("system_name")),
+            physical_state: get_str(value.get("physical_state")),
+            logical_state: get_str(value.get("logical_state")),
         }
     }
 }
