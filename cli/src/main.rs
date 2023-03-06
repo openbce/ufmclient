@@ -68,7 +68,7 @@ async fn main() -> Result<(), UFMError> {
                 rate_limit: *rate_limit,
                 guids: guids.to_vec(),
             };
-            create::run(opt).await?
+            create::run(&opt).await?
         }
         None => {}
     };

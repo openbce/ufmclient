@@ -12,11 +12,11 @@ pub struct CreateOptions {
     pub guids: Vec<String>,
 }
 
-pub async fn run(opt: CreateOptions) -> Result<(), UFMError> {
+pub async fn run(opt: &CreateOptions) -> Result<(), UFMError> {
     let mut ufm = UFM::new()?;
 
     let mut pbs = vec![];
-    for g in opt.guids {
+    for g in &opt.guids {
         pbs.push(PortBinding {
             guid: g.to_string(),
             index0: opt.index0,
