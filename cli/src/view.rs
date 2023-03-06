@@ -7,15 +7,7 @@ pub async fn run(pkey: &String) -> Result<(), UFMError> {
 
     let ps = {
         if !is_default_pkey(p.pkey) {
-            let f = Filter {
-                guids: {
-                    let mut v = Vec::new();
-                    for i in p.guids {
-                        v.push(i.guid.to_string());
-                    }
-                    Some(v)
-                },
-            };
+            let f = Filter::from(p.guids);
             ufm.list_port(Some(f)).await?
         } else {
             ufm.list_port(None).await?

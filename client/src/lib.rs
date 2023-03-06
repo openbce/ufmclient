@@ -90,6 +90,7 @@ impl Filter {
             for id in guids {
                 if p.guid == *id {
                     found = true;
+                    break;
                 }
             }
 
@@ -100,6 +101,19 @@ impl Filter {
 
         // All filters are passed, return true.
         true
+    }
+}
+
+impl From<Vec<PortBinding>> for Filter {
+    fn from(guids: Vec<PortBinding>) -> Self {
+        let mut v = Vec::new();
+        for i in &guids {
+            v.push(i.guid.to_string());
+        }
+
+        Self{
+            guids: Some(v)
+        }
     }
 }
 
