@@ -2,7 +2,6 @@ use std::collections::HashMap;
 use std::fmt;
 
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 
 use crate::types::RestError;
 use crate::util::{build_pkey, parse_pkey};
@@ -52,30 +51,13 @@ pub struct Partition {
 pub struct Port {
     pub guid: String,
     pub name: String,
+    #[serde(rename = "systemID")]
     pub system_id: String,
     pub lid: i32,
     pub dname: String,
     pub system_name: String,
     pub physical_state: String,
     pub logical_state: String,
-}
-
-impl From<HashMap<String, Value>> for Port {
-    fn from(value: HashMap<String, Value>) -> Self {
-        let get_str = |v: Option<&Value>| -> String { v.unwrap().as_str().unwrap().to_string() };
-        let get_i64 = |v: Option<&Value>| -> i64 { v.unwrap().as_i64().unwrap() };
-
-        Self {
-            guid: get_str(value.get("guid")),
-            name: get_str(value.get("name")),
-            system_id: get_str(value.get("systemID")),
-            lid: get_i64(value.get("lid")) as i32,
-            dname: get_str(value.get("dname")),
-            system_name: get_str(value.get("system_name")),
-            physical_state: get_str(value.get("physical_state")),
-            logical_state: get_str(value.get("logical_state")),
-        }
-    }
 }
 
 pub struct Filter {
@@ -111,9 +93,7 @@ impl From<Vec<PortBinding>> for Filter {
             v.push(i.guid.to_string());
         }
 
-        Self{
-            guids: Some(v)
-        }
+        Self { guids: Some(v) }
     }
 }
 
@@ -295,15 +275,14 @@ impl UFM {
 
         log::debug!("list ports: {}", resp);
 
-        let ports: Vec<HashMap<String, Value>> = serde_json::from_str(&resp[..]).unwrap();
+        let ports: Vec<Port> = serde_json::from_str(&resp[..]).unwrap();
         let f = match filter {
             None => Filter { guids: None },
             Some(f) => f,
         };
 
         let mut res = Vec::new();
-        for p in ports {
-            let port = Port::from(p);
+        for port in ports {
             if f.valid(&port) {
                 res.push(port);
             }
