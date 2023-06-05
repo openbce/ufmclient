@@ -1,50 +1,69 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2021-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+ *
+ * NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
+ * property and proprietary rights in and to this material, related
+ * documentation and any modifications thereto. Any use, reproduction,
+ * disclosure or distribution of this material and related documentation
+ * without an express license agreement from NVIDIA CORPORATION or
+ * its affiliates is strictly prohibited.
+ */
+
 use std::collections::HashMap;
-use std::fmt;
 
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
+use url::Url;
 
-use crate::types::RestError;
-use crate::util::{build_pkey, parse_pkey};
-
-pub mod util;
+use self::rest::{RestClient, RestClientConfig, RestError, RestScheme};
 
 mod rest;
-mod types;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct PartitionQoS {
     // Default 2k; one of 2k or 4k; the MTU of the services.
-    pub mtu_limit: i32,
+    pub mtu_limit: u16,
     // Default is None, value can be range from 0-15
-    pub service_level: i32,
+    pub service_level: u8,
     // Default is None, can be one of the following: 2.5, 10, 30, 5, 20, 40, 60, 80, 120, 14, 56, 112, 168, 25, 100, 200, or 300
     pub rate_limit: f64,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct PortBinding {
-    // The GUID of Port.
-    pub guid: String,
-    // Default false; store the PKey at index 0 of the PKey table of the GUID.
-    pub index0: bool,
-    // Default is full:
-    //   "full" - members with full membership can communicate with all hosts (members) within the network/partition
-    //   "limited" - members with limited membership cannot communicate with other members with limited membership. However, communication is allowed between every other combination of membership types.
-    pub membership: String,
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub enum PortMembership {
+    Limited,
+    Full,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
+pub struct PortConfig {
+    /// The GUID of Port.
+    pub guid: String,
+    /// Default false; store the PKey at index 0 of the PKey table of the GUID.
+    pub index0: bool,
+    /// Default is full:
+    ///   "full"    - members with full membership can communicate with all hosts (members) within the network/partition
+    ///   "limited" - members with limited membership cannot communicate with other members with limited membership.
+    ///               However, communication is allowed between every other combination of membership types.
+    pub membership: PortMembership,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct PartitionKey(i32);
+
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Partition {
-    // The name of Partition.
+    /// The name of Partition.
     pub name: String,
-    // The pkeys of Partition.
-    pub pkey: i32,
-    // Default false
+    /// The pkey of Partition.
+    pub pkey: PartitionKey,
+    /// Default false
     pub ipoib: bool,
-    // The QoS of Partition.
+    /// The QoS of Partition.
     pub qos: PartitionQoS,
-    // The Ports belong to the partition
-    pub guids: Vec<PortBinding>,
+    /// The Ports belong to the partition
+    pub guids: Vec<PortConfig>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -58,6 +77,15 @@ pub struct Port {
     pub system_name: String,
     pub physical_state: String,
     pub logical_state: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct Pkey {
+    pkey: String,
+    ip_over_ib: bool,
+    membership: PortMembership,
+    index0: bool,
+    guids: Vec<String>,
 }
 
 pub struct Filter {
@@ -86,8 +114,8 @@ impl Filter {
     }
 }
 
-impl From<Vec<PortBinding>> for Filter {
-    fn from(guids: Vec<PortBinding>) -> Self {
+impl From<Vec<PortConfig>> for Filter {
+    fn from(guids: Vec<PortConfig>) -> Self {
         let mut v = Vec::new();
         for i in &guids {
             v.push(i.guid.to_string());
@@ -97,88 +125,160 @@ impl From<Vec<PortBinding>> for Filter {
     }
 }
 
-pub struct UFM {
-    client: rest::RestClient,
+impl TryFrom<&String> for PartitionKey {
+    type Error = UFMError;
+
+    fn try_from(pkey: &String) -> Result<Self, Self::Error> {
+        let p = pkey.trim_start_matches("0x");
+        let k = i32::from_str_radix(p, 16);
+
+        match k {
+            Ok(v) => Ok(PartitionKey(v)),
+            Err(_e) => Err(UFMError::InvalidPKey(pkey.to_string())),
+        }
+    }
 }
 
+impl Into<String> for PartitionKey {
+    fn into(self) -> String {
+        format!("0x{:x}", self.0)
+    }
+}
+
+pub struct UFM {
+    client: RestClient,
+}
+
+#[derive(Error, Debug)]
 pub enum UFMError {
-    Unknown { msg: String },
-    NotFound { msg: String },
-    InvalidPKey { msg: String },
-    InvalidConfig { msg: String },
+    #[error("{0}")]
+    Unknown(String),
+    #[error("'{0}' not found")]
+    NotFound(String),
+    #[error("invalid pkey '{0}'")]
+    InvalidPKey(String),
+    #[error("invalid configuration '{0}'")]
+    InvalidConfig(String),
 }
 
 impl From<RestError> for UFMError {
     fn from(e: RestError) -> Self {
-        match &e {
-            RestError::Unknown { msg } => UFMError::Unknown {
-                msg: msg.to_string(),
-            },
-            RestError::NotFound { msg } => UFMError::NotFound {
-                msg: msg.to_string(),
-            },
-            RestError::AuthFailure { msg } => UFMError::InvalidConfig {
-                msg: msg.to_string(),
-            },
-            RestError::InvalidConfig { msg } => UFMError::InvalidConfig {
-                msg: msg.to_string(),
-            },
+        match e {
+            RestError::Unknown(msg) => UFMError::Unknown(msg),
+            RestError::NotFound(msg) => UFMError::NotFound(msg),
+            RestError::AuthFailure(msg) => UFMError::InvalidConfig(msg),
+            RestError::InvalidConfig(msg) => UFMError::InvalidConfig(msg),
         }
     }
 }
 
-impl fmt::Debug for UFMError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match &self {
-            UFMError::Unknown { msg } => {
-                write!(f, "Unknown: {}", msg)
-            }
-            UFMError::NotFound { msg } => {
-                write!(f, "Not found: {}", msg)
-            }
-            UFMError::InvalidPKey { msg } => {
-                write!(f, "Invalid pkey: {}", msg)
-            }
-            UFMError::InvalidConfig { msg } => {
-                write!(f, "Invalid configuration: {}", msg)
-            }
-        }
-    }
+pub struct UFMConfig {
+    pub address: String,
+    pub username: String,
+    pub password: String,
 }
 
 impl UFM {
-    pub fn new() -> Result<UFM, UFMError> {
-        let c = rest::RestClient::new()?;
+    pub fn new(conf: &UFMConfig) -> Result<UFM, UFMError> {
+        let addr = Url::parse(&conf.address)
+            .map_err(|_| UFMError::InvalidConfig("invalid UFM url".to_string()))?;
+        let address = addr
+            .host_str()
+            .ok_or(UFMError::InvalidConfig("invalid UFM host".to_string()))?;
+
+        let c = RestClient::new(&RestClientConfig {
+            username: conf.username.clone(),
+            password: conf.password.clone(),
+            address: address.to_string(),
+            port: addr.port(),
+            scheme: RestScheme::from(addr.scheme().to_string()),
+        })?;
 
         Ok(Self { client: c })
+    }
+
+    pub async fn bind_ports(
+        &mut self,
+        p: &Partition,
+        ports: Vec<PortConfig>,
+    ) -> Result<(), UFMError> {
+        let path = String::from("/ufmRest/resources/pkeys");
+
+        let mut membership = PortMembership::Full;
+        let mut index0 = true;
+
+        let mut guids = vec![];
+        for pb in &ports {
+            membership = pb.membership.clone();
+            index0 = pb.index0;
+            guids.push(pb.guid.to_string());
+        }
+
+        let pkey = Pkey {
+            pkey: p.pkey.clone().into(),
+            ip_over_ib: p.ipoib,
+            membership,
+            index0,
+            guids,
+        };
+
+        let data = serde_json::to_string(&pkey)
+            .map_err(|_| UFMError::InvalidConfig("invalid partition".to_string()))?;
+
+        self.client.post(&path, data).await?;
+
+        Ok(())
+    }
+
+    pub async fn unbind_ports(
+        &mut self,
+        pkey: &PartitionKey,
+        guids: Vec<String>,
+    ) -> Result<(), UFMError> {
+        let path = String::from("/ufmRest/actions/remove_guids_from_pkey");
+
+        #[derive(Serialize, Deserialize, Debug)]
+        struct Pkey {
+            pkey: String,
+            guids: Vec<String>,
+        }
+
+        let pkey = Pkey {
+            pkey: pkey.clone().into(),
+            guids,
+        };
+
+        let data = serde_json::to_string(&pkey)
+            .map_err(|_| UFMError::InvalidConfig("invalid partition".to_string()))?;
+
+        self.client.post(&path, data).await?;
+
+        Ok(())
     }
 
     pub async fn create_partition(&mut self, p: &Partition) -> Result<(), UFMError> {
         let path = String::from("/ufmRest/resources/pkeys");
 
-        #[derive(Serialize, Deserialize, Debug)]
-        struct Pkey {
-            pkey: String,
-            ip_over_ib: bool,
-            membership: String,
-            index0: bool,
-            guids: Vec<String>,
-        }
+        let mut membership = PortMembership::Full;
+        let mut index0 = true;
 
         let mut guids = vec![];
         for pb in &p.guids {
+            membership = pb.membership.clone();
+            index0 = pb.index0;
             guids.push(pb.guid.to_string());
         }
 
         let pkey = Pkey {
-            pkey: build_pkey(p.pkey),
+            pkey: p.pkey.clone().into(),
             ip_over_ib: p.ipoib,
-            membership: String::from("full"),
-            index0: true,
+            membership,
+            index0,
             guids,
         };
 
-        let data = serde_json::to_string(&pkey).unwrap();
+        let data = serde_json::to_string(&pkey)
+            .map_err(|_| UFMError::InvalidConfig("invalid partition".to_string()))?;
 
         self.client.post(&path, data).await?;
 
@@ -190,26 +290,19 @@ impl UFM {
             "/ufmRest/resources/pkeys/{}?guids_data=true&qos_conf=true",
             pkey
         );
-        let ps = self.client.get(&path).await?;
-
-        if ps == "{}" {
-            return Err(UFMError::NotFound {
-                msg: format!("{} not found", pkey),
-            });
-        }
 
         #[derive(Serialize, Deserialize, Debug)]
         struct Pkey {
             partition: String,
             ip_over_ib: bool,
             qos_conf: PartitionQoS,
-            guids: Vec<PortBinding>,
+            guids: Vec<PortConfig>,
         }
-        let pk: Pkey = serde_json::from_str(&ps[..]).unwrap();
+        let pk: Pkey = self.client.get(&path).await?;
 
         Ok(Partition {
             name: pk.partition,
-            pkey: parse_pkey(pkey)?,
+            pkey: PartitionKey::try_from(pkey)?,
             ipoib: pk.ip_over_ib,
             qos: pk.qos_conf,
             guids: pk.guids,
@@ -222,23 +315,17 @@ impl UFM {
             partition: String,
             ip_over_ib: bool,
             qos_conf: Option<PartitionQoS>,
-            guids: Option<Vec<PortBinding>>,
+            guids: Option<Vec<PortConfig>>,
         }
 
         let pkey_qos: HashMap<String, Pkey> = {
             let path = String::from("/ufmRest/resources/pkeys?qos_conf=true");
-            let ps = self.client.get(&path).await?;
-            log::debug!("listQoS: {}", ps);
-
-            serde_json::from_str(&ps[..]).unwrap()
+            self.client.get(&path).await?
         };
 
         let mut pkey_guids: HashMap<String, Pkey> = {
             let path = String::from("/ufmRest/resources/pkeys?guids_data=true");
-            let ps = self.client.get(&path).await?;
-            log::debug!("listGUIDs: {}", ps);
-
-            serde_json::from_str(&ps[..]).unwrap()
+            self.client.get(&path).await?
         };
 
         let mut parts = Vec::new();
@@ -246,7 +333,7 @@ impl UFM {
         for (k, v) in pkey_qos {
             parts.push(Partition {
                 name: v.partition,
-                pkey: parse_pkey(&k)?,
+                pkey: PartitionKey::try_from(&k)?,
                 ipoib: v.ip_over_ib,
                 qos: v.qos_conf.unwrap(),
                 guids: {
@@ -271,11 +358,8 @@ impl UFM {
 
     pub async fn list_port(&mut self, filter: Option<Filter>) -> Result<Vec<Port>, UFMError> {
         let path = String::from("/ufmRest/resources/ports?sys_type=Computer");
-        let resp = self.client.get(&path).await?;
+        let ports: Vec<Port> = self.client.get(&path).await?;
 
-        log::debug!("list ports: {}", resp);
-
-        let ports: Vec<Port> = serde_json::from_str(&resp[..]).unwrap();
         let f = match filter {
             None => Filter { guids: None },
             Some(f) => f,
@@ -298,8 +382,7 @@ impl UFM {
         }
 
         let path = String::from("/ufmRest/app/ufm_version");
-        let resp = self.client.get(&path).await?;
-        let v: Version = serde_json::from_str(&resp[..]).unwrap();
+        let v: Version = self.client.get(&path).await?;
 
         Ok(v.ufm_release_version)
     }
