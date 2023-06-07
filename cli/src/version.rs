@@ -1,7 +1,7 @@
-use ufmclient::{UFMError, UFM};
+use ufmclient::{UFMError, UFMConfig};
 
-pub async fn run() -> Result<(), UFMError> {
-    let mut ufm = UFM::new()?;
+pub async fn run(conf: UFMConfig) -> Result<(), UFMError> {
+    let ufm = ufmclient::connect(conf)?;
     let v = ufm.version().await?;
 
     println!("{}", v);

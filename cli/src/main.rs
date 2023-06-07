@@ -1,6 +1,7 @@
 use clap::{Parser, Subcommand};
 
-use ufmclient::UFMError;
+use ufmclient::{UFMError, UFMConfig};
+use std::env;
 
 mod create;
 mod delete;
@@ -34,7 +35,7 @@ enum Commands {
         #[arg(short, long)]
         pkey: String,
         #[arg(long)]
-        mtu: i32,
+        mtu: u16,
         #[arg(long)]
         ipoib: bool,
         #[arg(long)]
@@ -42,7 +43,7 @@ enum Commands {
         #[arg(short, long)]
         membership: String,
         #[arg(short, long)]
-        service_level: i32,
+        service_level: u8,
         #[arg(short, long)]
         rate_limit: f64,
         #[arg(short, long)]
@@ -54,12 +55,13 @@ enum Commands {
 async fn main() -> Result<(), UFMError> {
     env_logger::init();
 
+    let conf = load_conf();
     let cli = Cli::parse();
     match &cli.command {
-        Some(Commands::Delete { pkey }) => delete::run(pkey).await?,
-        Some(Commands::Version) => version::run().await?,
-        Some(Commands::List) => list::run().await?,
-        Some(Commands::View { pkey }) => view::run(pkey).await?,
+        Some(Commands::Delete { pkey }) => delete::run(conf, pkey).await?,
+        Some(Commands::Version) => version::run(conf).await?,
+        Some(Commands::List) => list::run(conf).await?,
+        Some(Commands::View { pkey }) => view::run(conf, pkey).await?,
         Some(Commands::Create {
             pkey,
             mtu,
@@ -80,10 +82,29 @@ async fn main() -> Result<(), UFMError> {
                 rate_limit: *rate_limit,
                 guids: guids.to_vec(),
             };
-            create::run(&opt).await?
+            create::run(conf, &opt).await?
         }
         None => {}
     };
 
     Ok(())
+}
+
+
+fn load_conf() -> UFMConfig {
+    let ufm_address = match env::var("UFM_ADDRESS").ok() {
+        Some(address) => address,
+        None => panic!("UFM_ADDRESS not found"),
+    };
+
+    let ufm_username = env::var("UFM_USERNAME").ok();
+    let ufm_passworkd = env::var("UFM_PASSWORD").ok();
+    let ufm_token = env::var("UFM_TOKEN").ok();
+
+    UFMConfig {
+        address: ufm_address,
+        username: ufm_username,
+        password: ufm_passworkd,
+        token: ufm_token,
+    }
 }

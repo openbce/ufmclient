@@ -1,25 +1,23 @@
-use ufmclient::util::build_pkey;
-use ufmclient::{UFMError, UFM};
+use ufmclient::{UFMError, UFMConfig};
 
-pub async fn run() -> Result<(), UFMError> {
-    let mut ufm = UFM::new()?;
+pub async fn run(conf: UFMConfig) -> Result<(), UFMError> {
+    let ufm = ufmclient::connect(conf)?;
     let ps = ufm.list_partition().await?;
 
     println!(
-        "{:<15}{:<10}{:<10}{:<10}{:<10}{:<10}{:<10}",
-        "Name", "Pkey", "IPoIB", "MTU", "Rate", "Level", "GUIDS#"
+        "{:<15}{:<10}{:<10}{:<10}{:<10}{:<10}",
+        "Name", "Pkey", "IPoIB", "MTU", "Rate", "Level"
     );
 
     for p in ps {
         println!(
-            "{:<15}{:<10}{:<10}{:<10}{:<10}{:<10}{:<10}",
+            "{:<15}{:<10}{:<10}{:<10}{:<10}{:<10}",
             p.name,
-            build_pkey(p.pkey),
+            p.pkey.to_string(),
             p.ipoib,
             p.qos.mtu_limit,
             p.qos.rate_limit,
-            p.qos.service_level,
-            p.guids.len()
+            p.qos.service_level
         )
     }
 
