@@ -110,6 +110,21 @@ impl RestClient {
         path: &'a str,
     ) -> Result<T, RestError> {
         let resp = self.execute_request(Method::GET, path, None).await?;
+        if resp.eq("{}") {
+            return Err(RestError::NotFound("not found".to_string()));
+        }
+
+        let data = serde_json::from_str(&resp)
+            .map_err(|_| RestError::InvalidConfig("invalid response".to_string()))?;
+
+        Ok(data)
+    }
+
+    pub async fn list<'a, T: serde::de::DeserializeOwned>(
+        &'a self,
+        path: &'a str,
+    ) -> Result<T, RestError> {
+        let resp = self.execute_request(Method::GET, path, None).await?;
         let data = serde_json::from_str(&resp)
             .map_err(|_| RestError::InvalidConfig("invalid response".to_string()))?;
 

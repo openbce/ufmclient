@@ -301,7 +301,7 @@ impl Ufm {
         }
 
         let path = String::from("/resources/pkeys?qos_conf=true");
-        let pkey_qos: HashMap<String, Pkey> = self.client.get(&path).await?;
+        let pkey_qos: HashMap<String, Pkey> = self.client.list(&path).await?;
 
         let mut parts = Vec::new();
 
@@ -340,11 +340,11 @@ impl Ufm {
 
             // list physical ports
             let path = String::from("/resources/ports?sys_type=Computer");
-            let physical_ports: Vec<PhysicalPort> = self.client.get(&path).await?;
+            let physical_ports: Vec<PhysicalPort> = self.client.list(&path).await?;
 
              // list virtual ports
              let path = String::from("/resources/vports");
-             let virtual_ports: Vec<VirtualPort> = self.client.get(&path).await?;
+             let virtual_ports: Vec<VirtualPort> = self.client.list(&path).await?;
 
             let mut port_map = HashMap::new();
             for pport in physical_ports {
