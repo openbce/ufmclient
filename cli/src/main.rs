@@ -1,7 +1,7 @@
 use clap::{Parser, Subcommand};
 
-use ufmclient::{UFMError, UFMConfig};
 use std::env;
+use ufmclient::{UFMConfig, UFMError};
 
 mod create;
 mod delete;
@@ -55,8 +55,9 @@ enum Commands {
 async fn main() -> Result<(), UFMError> {
     env_logger::init();
 
-    let conf = load_conf();
     let cli = Cli::parse();
+
+    let conf = load_conf();
     match &cli.command {
         Some(Commands::Delete { pkey }) => delete::run(conf, pkey).await?,
         Some(Commands::Version) => version::run(conf).await?,
@@ -89,7 +90,6 @@ async fn main() -> Result<(), UFMError> {
 
     Ok(())
 }
-
 
 fn load_conf() -> UFMConfig {
     let ufm_address = match env::var("UFM_ADDRESS").ok() {

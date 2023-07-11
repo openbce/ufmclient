@@ -3,10 +3,10 @@ use std::fmt::{Display, Formatter};
 
 use hyper::client::HttpConnector;
 use hyper::header::{AUTHORIZATION, CONTENT_TYPE};
+use hyper::http::StatusCode;
 use hyper::{Body, Client, Method, Uri};
 use hyper_tls::HttpsConnector;
 use thiserror::Error;
-use hyper::http::StatusCode;
 
 #[derive(Error, Debug)]
 pub enum RestError {
@@ -172,13 +172,13 @@ impl RestClient {
         let status = body.status();
         let chunk = hyper::body::to_bytes(body.into_body()).await?;
         let data = String::from_utf8(chunk.to_vec()).unwrap();
-        
+
         match status {
             StatusCode::OK => Ok(data),
             _ => {
                 println!("{}", data);
                 Err(RestError::Unknown(data))
-            },
+            }
         }
     }
 }

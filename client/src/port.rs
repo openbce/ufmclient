@@ -1,7 +1,6 @@
-use std::{fmt::Display};
+use std::fmt::Display;
 
 use serde::{Deserialize, Serialize};
-
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "lowercase")]
@@ -55,7 +54,7 @@ impl Display for Port {
 
 impl From<PhysicalPort> for Port {
     fn from(physicalport: PhysicalPort) -> Self {
-        Port { 
+        Port {
             guid: physicalport.guid.clone(),
             name: Some(physicalport.name),
             system_id: physicalport.system_id,
@@ -63,14 +62,14 @@ impl From<PhysicalPort> for Port {
             system_name: physicalport.system_name,
             logical_state: physicalport.logical_state,
             parent_guid: None,
-            port_type: Some(PortType::Physical)
-         }
+            port_type: Some(PortType::Physical),
+        }
     }
-} 
+}
 
 impl From<VirtualPort> for Port {
     fn from(virtualport: VirtualPort) -> Self {
-        Port { 
+        Port {
             guid: virtualport.virtual_port_guid.clone(),
             name: None,
             system_id: virtualport.system_guid,
@@ -78,10 +77,10 @@ impl From<VirtualPort> for Port {
             system_name: virtualport.system_name,
             logical_state: virtualport.virtual_port_state,
             parent_guid: Some(virtualport.port_guid),
-            port_type: Some(PortType::Virtual)
-         }
+            port_type: Some(PortType::Virtual),
+        }
     }
-} 
+}
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct PhysicalPort {

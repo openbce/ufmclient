@@ -1,4 +1,6 @@
-use ufmclient::{Partition, PartitionQoS, PartitionKey, UFMError, UFMConfig, PortConfig, PortMembership};
+use ufmclient::{
+    Partition, PartitionKey, PartitionQoS, PortConfig, PortMembership, UFMConfig, UFMError,
+};
 
 pub struct CreateOptions {
     pub pkey: String,
@@ -33,9 +35,8 @@ pub async fn run(conf: UFMConfig, opt: &CreateOptions) -> Result<(), UFMError> {
             rate_limit: opt.rate_limit,
         },
     };
-   
+
     ufm.bind_ports(p, pbs).await?;
 
     Ok(())
 }
- 

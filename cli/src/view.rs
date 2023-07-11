@@ -1,4 +1,4 @@
-use ufmclient::{UFMError, UFMConfig};
+use ufmclient::{UFMConfig, UFMError};
 
 pub async fn run(conf: UFMConfig, pkey: &String) -> Result<(), UFMError> {
     let ufm = ufmclient::connect(conf)?;
@@ -15,7 +15,7 @@ pub async fn run(conf: UFMConfig, pkey: &String) -> Result<(), UFMError> {
 
     println!(
         "    {:<20}{:<20}{:<10}{:<20}{:<10}{:<15}{:<10}{:<20}",
-        "GUID", "ParentGUID", "PortType", "SystemID", "LID", "SystemName", "LogState", "Name", 
+        "GUID", "ParentGUID", "PortType", "SystemID", "LID", "SystemName", "LogState", "Name",
     );
     for port in ps {
         println!("{}", port.to_string());

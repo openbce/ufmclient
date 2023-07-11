@@ -1,4 +1,4 @@
-use ufmclient::{UFMError, UFMConfig};
+use ufmclient::{UFMConfig, UFMError};
 
 pub async fn run(conf: UFMConfig) -> Result<(), UFMError> {
     let ufm = ufmclient::connect(conf)?;

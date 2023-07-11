@@ -1,14 +1,14 @@
-use std::{collections::HashMap};
+use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use url::Url;
 
+use self::port::{PhysicalPort, Port, VirtualPort};
 use self::rest::{RestClient, RestClientConfig, RestError, RestScheme};
-use self::port::{Port, PhysicalPort, VirtualPort};
 
-mod rest;
 mod port;
+mod rest;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct PartitionQoS {
@@ -342,14 +342,13 @@ impl Ufm {
             let path = String::from("/resources/ports?sys_type=Computer");
             let physical_ports: Vec<PhysicalPort> = self.client.list(&path).await?;
 
-             // list virtual ports
-             let path = String::from("/resources/vports");
-             let virtual_ports: Vec<VirtualPort> = self.client.list(&path).await?;
+            // list virtual ports
+            let path = String::from("/resources/vports");
+            let virtual_ports: Vec<VirtualPort> = self.client.list(&path).await?;
 
             let mut port_map = HashMap::new();
             for pport in physical_ports {
                 port_map.insert(pport.guid.clone(), Port::from(pport));
-               
             }
             for vport in virtual_ports {
                 port_map.insert(vport.virtual_port_guid.clone(), Port::from(vport));
@@ -360,7 +359,7 @@ impl Ufm {
                 match port_map.get(&guid) {
                     Some(p) => {
                         res.push(p.clone());
-                    },
+                    }
                     None => {
                         let p = Port {
                             guid: guid,
@@ -370,10 +369,10 @@ impl Ufm {
                             system_name: "".to_string(),
                             logical_state: "Unknown".to_string(),
                             parent_guid: None,
-                            port_type: None
+                            port_type: None,
                         };
                         res.push(p);
-                    },
+                    }
                 }
             }
         }
