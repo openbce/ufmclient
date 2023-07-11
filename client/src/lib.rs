@@ -326,34 +326,34 @@ impl Ufm {
 
     pub async fn list_port(&self, pkey: PartitionKey) -> Result<Vec<Port>, UFMError> {
         let mut res = Vec::new();
+        // get GUIDs from pkey
+        #[derive(Serialize, Deserialize, Debug)]
+        struct PkeyWithGUIDs {
+            pub partition: String,
+            pub ip_over_ib: bool,
+            pub guids: Vec<PortConfig>,
+        }
+
+        let path = format!("resources/pkeys/{}?guids_data=true", pkey.to_string());
+        let pkeywithguids: PkeyWithGUIDs = self.client.get(&path).await?;
+
+        // list physical ports
+        let path = String::from("/resources/ports?sys_type=Computer");
+        let physical_ports: Vec<PhysicalPort> = self.client.list(&path).await?;
+
+        // list virtual ports
+        let path = String::from("/resources/vports");
+        let virtual_ports: Vec<VirtualPort> = self.client.list(&path).await?;
+
+        let mut port_map = HashMap::new();
+        for pport in physical_ports {
+            port_map.insert(pport.guid.clone(), Port::from(pport));
+        }
+        for vport in virtual_ports {
+            port_map.insert(vport.virtual_port_guid.clone(), Port::from(vport));
+        }
+
         if !pkey.is_default_pkey() {
-            // get GUIDs from pkey
-            #[derive(Serialize, Deserialize, Debug)]
-            struct PkeyWithGUIDs {
-                pub partition: String,
-                pub ip_over_ib: bool,
-                pub guids: Vec<PortConfig>,
-            }
-
-            let path = format!("resources/pkeys/{}?guids_data=true", pkey.to_string());
-            let pkeywithguids: PkeyWithGUIDs = self.client.get(&path).await?;
-
-            // list physical ports
-            let path = String::from("/resources/ports?sys_type=Computer");
-            let physical_ports: Vec<PhysicalPort> = self.client.list(&path).await?;
-
-            // list virtual ports
-            let path = String::from("/resources/vports");
-            let virtual_ports: Vec<VirtualPort> = self.client.list(&path).await?;
-
-            let mut port_map = HashMap::new();
-            for pport in physical_ports {
-                port_map.insert(pport.guid.clone(), Port::from(pport));
-            }
-            for vport in virtual_ports {
-                port_map.insert(vport.virtual_port_guid.clone(), Port::from(vport));
-            }
-
             for port_config in pkeywithguids.guids {
                 let guid = port_config.guid;
                 match port_map.get(&guid) {
@@ -375,6 +375,9 @@ impl Ufm {
                     }
                 }
             }
+        } else {
+            // list all the ports for default pkey(0x7fff)
+            res = port_map.values().cloned().collect();
         }
         Ok(res)
     }

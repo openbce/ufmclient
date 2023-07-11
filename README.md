@@ -5,7 +5,7 @@ The rust client of UFM
 ### Set environment
 ```
 export UFM_ADDRESS=$ufm_server_address
-export UFM_ADDRESS=$ufm_server_token 
+export UFM_TOKEN=$ufm_server_token
 ```
 ### Version
 ```
