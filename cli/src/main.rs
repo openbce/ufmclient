@@ -21,31 +21,46 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
+    /// View the detail of the partition
     View {
+        /// The pkey of the partition to view
         #[arg(short, long)]
         pkey: String,
     },
+    /// List all partitions
     List,
+    /// Get the version of UFM
     Version,
+    /// Delete the partition
     Delete {
+        /// The pkey of the partition to delete
         #[arg(short, long)]
         pkey: String,
     },
+    /// Create a partition
     Create {
+        /// The pkey for the new partition
         #[arg(short, long)]
         pkey: String,
-        #[arg(long)]
+        /// The MTU of the new partition
+        #[arg(long, default_value_t = 2048)]
         mtu: u16,
-        #[arg(long)]
+        /// The IPOverIB of the new partition
+        #[arg(long, default_value_t = true)]
         ipoib: bool,
-        #[arg(long)]
+        /// The Index0 of the new partition
+        #[arg(long, default_value_t = true)]
         index0: bool,
-        #[arg(short, long)]
+        /// The Membership of the new partition
+        #[arg(short, long, default_value_t = String::from("full"))]
         membership: String,
-        #[arg(short, long)]
+        /// The ServiceLevel of the new partition
+        #[arg(short, long, default_value_t = 0)]
         service_level: u8,
-        #[arg(short, long)]
+        /// The RateLimit of the new partition
+        #[arg(short, long, default_value_t = 100.0)]
         rate_limit: f64,
+        /// The GUIDs of the new partition
         #[arg(short, long)]
         guids: Vec<String>,
     },

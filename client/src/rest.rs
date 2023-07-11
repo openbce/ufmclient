@@ -175,10 +175,7 @@ impl RestClient {
 
         match status {
             StatusCode::OK => Ok(data),
-            _ => {
-                println!("{}", data);
-                Err(RestError::Unknown(data))
-            }
+            _ => Err(RestError::Unknown(data)),
         }
     }
 }

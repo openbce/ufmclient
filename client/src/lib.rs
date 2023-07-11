@@ -362,7 +362,7 @@ impl Ufm {
                     }
                     None => {
                         let p = Port {
-                            guid: guid,
+                            guid,
                             name: None,
                             system_id: "".to_string(),
                             lid: 65535,
