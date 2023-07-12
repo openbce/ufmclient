@@ -11,6 +11,3 @@ tokio = { version = "1", features = ["full"] }
 clap = { version = "4.1", features = ["derive"] }
 env_logger = { version = "0.10" }
 
-[[bin]]
-name = "ufm"
-path = "src/main.rs"

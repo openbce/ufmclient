@@ -155,6 +155,7 @@ impl RestClient {
             .map_err(|_| RestError::InvalidConfig("invalid path".to_string()))?;
 
         let body = data.unwrap_or(String::new());
+        log::debug!("Method: {method}, URL: {url}, Body: {body}");
 
         let req = hyper::Request::builder()
             .method(method)
