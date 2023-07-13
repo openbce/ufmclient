@@ -14,8 +14,16 @@ mod view;
 #[command(author = "Klaus Ma <klaus@xflops.cn>")]
 #[command(version = "0.1.0")]
 #[command(about = "UFM command line", long_about = None)]
-struct Cli {
-    #[command(subcommand)]
+struct Options {
+    #[clap(long)]
+    ufm_address: Option<String>,
+    #[clap(long)]
+    ufm_username: Option<String>,
+    #[clap(long)]
+    ufm_password: Option<String>,
+    #[clap(long)]
+    ufm_token: Option<String>,
+    #[clap(subcommand)]
     command: Option<Commands>,
 }
 
@@ -70,10 +78,10 @@ enum Commands {
 async fn main() -> Result<(), UFMError> {
     env_logger::init();
 
-    let cli = Cli::parse();
+    let opt = Options::parse();
 
-    let conf = load_conf();
-    match &cli.command {
+    let conf = load_conf(&opt);
+    match &opt.command {
         Some(Commands::Delete { pkey }) => delete::run(conf, pkey).await?,
         Some(Commands::Version) => version::run(conf).await?,
         Some(Commands::List) => list::run(conf).await?,
@@ -99,22 +107,25 @@ async fn main() -> Result<(), UFMError> {
                 guids: guids.to_vec(),
             };
             create::run(conf, &opt).await?
-        }
+        },
         None => {}
     };
 
     Ok(())
 }
 
-fn load_conf() -> UFMConfig {
-    let ufm_address = match env::var("UFM_ADDRESS").ok() {
-        Some(address) => address,
-        None => panic!("UFM_ADDRESS not found"),
+fn load_conf(opt: &Options) -> UFMConfig {
+    let ufm_address = match opt.ufm_address.clone() {
+        Some(s) => s,
+        None => match env::var("UFM_ADDRESS").ok() {
+            Some(s) => s,
+            None => panic!("UFM_ADDRESS not found"),
+        },
     };
 
-    let ufm_username = env::var("UFM_USERNAME").ok();
-    let ufm_passworkd = env::var("UFM_PASSWORD").ok();
-    let ufm_token = env::var("UFM_TOKEN").ok();
+    let ufm_username = opt.ufm_username.clone().map_or(env::var("UFM_USERNAME").ok(), Some);
+    let ufm_passworkd = opt.ufm_password.clone().map_or(env::var("UFM_PASSWORD").ok(), Some);
+    let ufm_token = opt.ufm_token.clone().map_or(env::var("UFM_TOKEN").ok(), Some);
 
     UFMConfig {
         address: ufm_address,
