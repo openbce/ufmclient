@@ -8,6 +8,6 @@ edition = "2021"
 [dependencies]
 ufmclient = { path = "../client" }
 tokio = { version = "1", features = ["full"] }
-clap = { version = "4.1", features = ["derive"] }
+clap = { version = "4.1", features = ["derive", "env"] }
 env_logger = { version = "0.10" }
 
