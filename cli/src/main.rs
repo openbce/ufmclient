@@ -1,6 +1,4 @@
 use clap::{Parser, Subcommand};
-
-use std::env;
 use ufmclient::{UFMConfig, UFMError};
 
 mod create;
@@ -15,13 +13,13 @@ mod view;
 #[command(version = "0.1.0")]
 #[command(about = "UFM command line", long_about = None)]
 struct Options {
-    #[clap(long)]
+    #[clap(long, env = "UFM_ADDRESS")]
     ufm_address: Option<String>,
-    #[clap(long)]
+    #[clap(long, env = "UFM_USERNAME")]
     ufm_username: Option<String>,
-    #[clap(long)]
+    #[clap(long, env = "UFM_PASSWORD")]
     ufm_password: Option<String>,
-    #[clap(long)]
+    #[clap(long, env = "UFM_TOKEN")]
     ufm_token: Option<String>,
     #[clap(subcommand)]
     command: Option<Commands>,
@@ -78,7 +76,7 @@ enum Commands {
 async fn main() -> Result<(), UFMError> {
     env_logger::init();
 
-    let opt = Options::parse();
+    let opt: Options = Options::parse();
 
     let conf = load_conf(&opt);
     match &opt.command {
@@ -107,7 +105,7 @@ async fn main() -> Result<(), UFMError> {
                 guids: guids.to_vec(),
             };
             create::run(conf, &opt).await?
-        },
+        }
         None => {}
     };
 
@@ -117,20 +115,13 @@ async fn main() -> Result<(), UFMError> {
 fn load_conf(opt: &Options) -> UFMConfig {
     let ufm_address = match opt.ufm_address.clone() {
         Some(s) => s,
-        None => match env::var("UFM_ADDRESS").ok() {
-            Some(s) => s,
-            None => panic!("UFM_ADDRESS not found"),
-        },
+        None => panic!("UFM_ADDRESS environment or ufm_address parameter not found"),
     };
-
-    let ufm_username = opt.ufm_username.clone().map_or(env::var("UFM_USERNAME").ok(), Some);
-    let ufm_passworkd = opt.ufm_password.clone().map_or(env::var("UFM_PASSWORD").ok(), Some);
-    let ufm_token = opt.ufm_token.clone().map_or(env::var("UFM_TOKEN").ok(), Some);
 
     UFMConfig {
         address: ufm_address,
-        username: ufm_username,
-        password: ufm_passworkd,
-        token: ufm_token,
+        username: opt.ufm_username.clone(),
+        password: opt.ufm_password.clone(),
+        token: opt.ufm_token.clone(),
     }
 }
