@@ -1,12 +1,38 @@
 use std::fmt;
 use std::fmt::{Display, Formatter};
+use std::time::Duration;
 
 use hyper::client::HttpConnector;
 use hyper::header::{AUTHORIZATION, CONTENT_TYPE};
 use hyper::http::StatusCode;
 use hyper::{Body, Client, Method, Uri};
-use hyper_tls::HttpsConnector;
+use hyper_rustls::HttpsConnector;
+use hyper_timeout::TimeoutConnector;
+use std::time::SystemTime;
 use thiserror::Error;
+use tokio_rustls::rustls;
+use tokio_rustls::rustls::client::{ServerCertVerified, ServerCertVerifier};
+use tokio_rustls::rustls::{ClientConfig, ServerName};
+
+struct NoCertificateVerification;
+
+impl ServerCertVerifier for NoCertificateVerification {
+    fn verify_server_cert(
+        &self,
+        _end_entity: &rustls::Certificate,
+        _intermediates: &[rustls::Certificate],
+        _server_name: &ServerName,
+        _scts: &mut dyn Iterator<Item = &[u8]>,
+        _ocsp_response: &[u8],
+        _now: SystemTime,
+    ) -> Result<ServerCertVerified, rustls::Error> {
+        #[cfg(not(test))]
+        println!("IGNORING SERVER CERT, Please ensure that I am removed to actually validate TLS.");
+        Ok(ServerCertVerified::assertion())
+    }
+}
+
+const REST_TIME_OUT: Duration = Duration::from_secs(10);
 
 #[derive(Error, Debug)]
 pub enum RestError {
@@ -67,8 +93,8 @@ pub struct RestClient {
     base_url: String,
     auth_info: String,
     scheme: RestScheme,
-    http_client: hyper::Client<HttpConnector>,
-    https_client: hyper::Client<HttpsConnector<HttpConnector>>,
+    http_client: hyper::Client<TimeoutConnector<HttpConnector>>,
+    https_client: hyper::Client<TimeoutConnector<HttpsConnector<HttpConnector>>>,
 }
 
 impl RestClient {
@@ -95,13 +121,34 @@ impl RestClient {
             .parse::<Uri>()
             .map_err(|_| RestError::InvalidConfig("invalid rest address".to_string()))?;
 
+        let mut http_connector = TimeoutConnector::new(HttpConnector::new());
+        http_connector.set_connect_timeout(Some(REST_TIME_OUT));
+        http_connector.set_read_timeout(Some(REST_TIME_OUT));
+        http_connector.set_write_timeout(Some(REST_TIME_OUT));
+
+        let config = ClientConfig::builder()
+            .with_safe_defaults()
+            .with_custom_certificate_verifier(std::sync::Arc::new(NoCertificateVerification))
+            .with_no_client_auth();
+
+        let mut https_connector = TimeoutConnector::new(
+            hyper_rustls::HttpsConnectorBuilder::new()
+                .with_tls_config(config)
+                .https_only()
+                .enable_http1()
+                .build(),
+        );
+        https_connector.set_connect_timeout(Some(REST_TIME_OUT));
+        https_connector.set_read_timeout(Some(REST_TIME_OUT));
+        https_connector.set_write_timeout(Some(REST_TIME_OUT));
+
         Ok(Self {
             base_url,
             auth_info,
             scheme: conf.scheme.clone(),
             // TODO(k82cn): Add timout for the clients.
-            http_client: Client::new(),
-            https_client: Client::builder().build::<_, hyper::Body>(HttpsConnector::new()),
+            http_client: Client::builder().build::<_, hyper::Body>(http_connector),
+            https_client: Client::builder().build::<_, hyper::Body>(https_connector),
         })
     }
 
