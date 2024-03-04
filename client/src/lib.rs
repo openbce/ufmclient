@@ -342,16 +342,16 @@ impl Ufm {
         let physical_ports: Vec<PhysicalPort> = self.client.list(&path).await?;
 
         // list virtual ports
-        let path = String::from("/resources/vports");
-        let virtual_ports: Vec<VirtualPort> = self.client.list(&path).await?;
+        // let path = String::from("/resources/vports");
+        // let virtual_ports: Vec<VirtualPort> = self.client.list(&path).await?;
 
         let mut port_map = HashMap::new();
         for pport in physical_ports {
             port_map.insert(pport.guid.clone(), Port::from(pport));
         }
-        for vport in virtual_ports {
-            port_map.insert(vport.virtual_port_guid.clone(), Port::from(vport));
-        }
+        // for vport in virtual_ports {
+        //     port_map.insert(vport.virtual_port_guid.clone(), Port::from(vport));
+        // }
 
         if !pkey.is_default_pkey() {
             for port_config in pkeywithguids.guids {
